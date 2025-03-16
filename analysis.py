@@ -12,14 +12,14 @@ sp500 = yf.download('^GSPC', start='2024-01-01', end='2025-03-15')
 nucor_returns = nucor['Close'].pct_change().dropna()
 alcoa_returns = alcoa['Close'].pct_change().dropna()
 ford_returns = ford['Close'].pct_change().dropna()
-gmotors_returns = general_motors['Close'].pct_change().dropna()
+g_motors_returns = general_motors['Close'].pct_change().dropna()
 sp500_returns = sp500['Close'].pct_change().dropna()
 
 # Summary statistics of returns
 print("Nucor returns summary:", nucor_returns.describe())
 print("\nAlcoa returns summary:", alcoa_returns.describe())
 print("\nFord returns summary:", ford_returns.describe())
-print("\nGeneral Motors returns summary:", gmotors_returns.describe())
+print("\nGeneral Motors returns summary:", g_motors_returns.describe())
 print("\nS&P 500 returns summary:", sp500_returns.describe())
 
 # Plot
@@ -50,6 +50,27 @@ nucor_between = nucor.loc[tariff_announcement_date:tariff_implementation_date, '
 nucor_after = nucor.loc[tariff_implementation_date:, 'Close'].mean()
 
 print(f"Nucor closing price before tariff: {nucor_before}, \nNucor closing price after tariff announcement: {nucor_between}")
+
+# Alcoa
+alcoa_before = alcoa.loc[:tariff_announcement_date, 'Close'].mean()
+alcoa_between = alcoa.loc[tariff_announcement_date:tariff_implementation_date, 'Close'].mean()
+alcoa_after = alcoa.loc[tariff_implementation_date:, 'Close'].mean()
+
+print(f"Alcoa closing price before tariff: {alcoa_before}, \nAlcoa closing price after tariff announcement: {alcoa_between}")
+
+# Ford
+ford_before = ford.loc[:tariff_announcement_date, 'Close'].mean()
+ford_between = ford.loc[tariff_announcement_date:tariff_implementation_date, 'Close'].mean()
+ford_after = ford.loc[tariff_implementation_date:, 'Close'].mean()
+
+print(f"Ford closing price before tariff: {ford_before}, \nFord closing price after tariff announcement: {ford_between}")
+
+# General Motors
+g_motors_before = general_motors.loc[:tariff_announcement_date, 'Close'].mean()
+g_motors_between = general_motors.loc[tariff_announcement_date:tariff_implementation_date, 'Close'].mean()
+g_motors_after = general_motors.loc[tariff_implementation_date:, 'Close'].mean()
+
+print(f"General Motors closing price before tariff: {g_motors_before}, \nGeneral Motors closing price after tariff announcement: {g_motors_between}")
 
 # Machine Learning
 from sklearn.model_selection import train_test_split
