@@ -19,18 +19,18 @@ general_motors.index = pd.to_datetime(general_motors.index)
 sp500.index = pd.to_datetime(sp500.index)
 
 # Returns
-nucor_returns = nucor['Close'].pct_change().dropna()
-alcoa_returns = alcoa['Close'].pct_change().dropna()
-ford_returns = ford['Close'].pct_change().dropna()
-g_motors_returns = general_motors['Close'].pct_change().dropna()
-sp500_returns = sp500['Close'].pct_change().dropna()
+nucor['Returns'] = nucor['Close'].pct_change().dropna()
+alcoa['Returns'] = alcoa['Close'].pct_change().dropna()
+ford['Returns'] = ford['Close'].pct_change().dropna()
+general_motors['Returns'] = general_motors['Close'].pct_change().dropna()
+sp500['Returns'] = sp500['Close'].pct_change().dropna()
 
 # Summary statistics of returns
-print("Nucor returns summary:", nucor_returns.describe())
-print("\nAlcoa returns summary:", alcoa_returns.describe())
-print("\nFord returns summary:", ford_returns.describe())
-print("\nGeneral Motors returns summary:", g_motors_returns.describe())
-print("\nS&P 500 returns summary:", sp500_returns.describe())
+print("Nucor returns summary:", nucor['Returns'].describe())
+print("\nAlcoa returns summary:", alcoa['Returns'].describe())
+print("\nFord returns summary:", ford['Returns'].describe())
+print("\nGeneral Motors returns summary:", general_motors['Returns'].describe())
+print("\nS&P 500 returns summary:", sp500['Returns'].describe())
 
 # Plot
 import matplotlib.pyplot as plt
@@ -62,6 +62,7 @@ stocks = {
     'S&P 500': sp500
 }
 
+# Prices
 for name, df in stocks.items():
     before = df.loc[:election_date, 'Close'].mean()
     between = df.loc[tariff_announcement_date:tariff_implementation_date, 'Close'].mean()
@@ -85,26 +86,51 @@ for name, df in stocks.items():
     plt.legend()
     plt.show()
 
+# Corelation Matrix
+correlation_matrix = pd.DataFrame({
+    'Nucor': nucor['Returns'],
+    'Alcoa': alcoa['Returns'],
+    'Ford': ford['Returns'],
+    'General Motors': general_motors['Returns'],
+    'S&P 500': sp500['Returns']
+}).corr()
 
+import seaborn as sns
+
+plt.figure(figsize=(10,8))
+sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', square=True)
+plt.title('Correlation Matrix')
+plt.show()
+
+#Volatility
+for name, df in stocks.items():
+    before_vol = df.loc[:election_date, 'Returns'].std()
+    between_vol = df.loc[tariff_announcement_date:tariff_implementation_date, 'Returns'].std()
+    after_vol = df.loc[tariff_implementation_date:, 'Returns'].std()
+
+    print(f"\n{name} volatility before election: {before_vol}")
+    print(f"{name} volatility after tariff announcement: {between_vol}")
+    print(f"{name} volatility after tariff implementation: {after_vol}")
 
 
 # Machine Learning
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
 
-X = nucor[['Open', 'High', 'Low']].shift(1).dropna()
-y = nucor.loc[X.index, 'Close']
+for name, df in stocks.items():
+    X = df[['Open', 'High', 'Low', 'Close']].shift(1).dropna()
+    y = df.loc[X.index, 'Close']
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-model = RandomForestRegressor()
-model.fit(X_train, y_train)
+    model = RandomForestRegressor()
+    model.fit(X_train, y_train)
 
-predictions = model.predict(X_test)
+    predictions = model.predict(X_test)
 
-print("\nModel score:", model.score(X_test, y_test))
+    print(f"\n{name} model score: {model.score(X_test, y_test)}")
 
-last_day_data = nucor[['Open', 'High', 'Low']].iloc[-1].values.reshape(1, -1)
-next_day_prediction = model.predict(last_day_data)
+    last_day_data = df[['Open', 'High', 'Low', 'Close']].iloc[-1].values.reshape(1, -1)
+    next_day_prediction = model.predict(last_day_data)
 
-print(f"\nPredicted closing price for the next day: {next_day_prediction[0]}")
+    print(f"{name} predicted closing price for the next day: {next_day_prediction[0]}")
