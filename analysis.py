@@ -32,21 +32,6 @@ print("\nFord returns summary:", ford['Returns'].describe())
 print("\nGeneral Motors returns summary:", general_motors['Returns'].describe())
 print("\nS&P 500 returns summary:", sp500['Returns'].describe())
 
-# Plot
-import matplotlib.pyplot as plt
-
-plt.figure(figsize=(12,6))
-plt.plot(nucor['Close'], label='Nucor')
-plt.plot(alcoa['Close'], label='Alcoa')
-plt.plot(ford['Close'], label='Ford')
-plt.plot(general_motors['Close'], label='General Motors')
-plt.plot(sp500['Close'], label='S&P 500')
-plt.title('Stock and Index Performance')
-plt.xlabel('Date')
-plt.ylabel('Closing Price')
-plt.legend()
-plt.show()
-
 
 # ANALYSIS
 
@@ -61,6 +46,30 @@ stocks = {
     'General Motors': general_motors,
     'S&P 500': sp500
 }
+
+cumulative_returns = {
+    'Nucor': (1 + nucor['Returns']).cumprod() - 1,
+    'Alcoa': (1 + alcoa['Returns']).cumprod() - 1,
+    'Ford': (1 + ford['Returns']).cumprod() - 1,
+    'General Motors': (1 + general_motors['Returns']).cumprod() - 1,
+    'S&P 500': (1 + sp500['Returns']).cumprod() - 1
+}
+
+import matplotlib.pyplot as plt
+
+for name, data in cumulative_returns.items():
+    plt.plot(data.index, data, label=name, linewidth=0.8)
+
+plt.axvline(x=tariff_announcement_date, color='b', linestyle='--', linewidth=0.5, label='Tariff Announcement')
+plt.axvline(x=tariff_implementation_date, color='g', linestyle='--', linewidth=0.5, label='Tariff Implementation')
+plt.axvline(x=election_date, color='r', linestyle='--', linewidth=0.5, label='Election Date')
+plt.title('Cumulative Returns of Stocks and Index')
+plt.xlabel('Date')
+plt.xticks(rotation=45)
+plt.ylabel('Cumulative Return')
+plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0)
+plt.show()
+
 
 # Prices
 for name, df in stocks.items():
@@ -98,7 +107,7 @@ correlation_matrix = pd.DataFrame({
 import seaborn as sns
 
 plt.figure(figsize=(10,8))
-sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', square=True)
+sns.heatmap(correlation_matrix, annot=True, cmap='Blues', square=True)
 plt.title('Correlation Matrix')
 plt.show()
 
@@ -120,8 +129,12 @@ from sklearn.ensemble import RandomForestRegressor
 for name, df in stocks.items():
     X = df[['Open', 'High', 'Low', 'Close']].shift(1).dropna()
     y = df.loc[X.index, 'Close']
+    y = y.values
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    y_train = y_train.ravel()
+    y_test = y_test.ravel()
 
     model = RandomForestRegressor()
     model.fit(X_train, y_train)
