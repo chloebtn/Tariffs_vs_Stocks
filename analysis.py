@@ -2,11 +2,21 @@ import yfinance as yf
 import pandas as pd
 
 #Get data
-nucor = yf.download('NUE', start='2024-01-01', end='2025-03-15')        # for steel
-alcoa = yf.download('AA', start='2024-01-01', end='2025-03-15')         # for aluminum
-ford = yf.download('F', start='2024-01-01', end='2025-03-15')
-general_motors = yf.download('GM', start='2024-01-01', end='2025-03-15')
-sp500 = yf.download('^GSPC', start='2024-01-01', end='2025-03-15')
+
+start_date = '2024-07-01'
+end_date = '2025-03-15'
+
+nucor = yf.download('NUE', start=start_date, end=end_date)        
+alcoa = yf.download('AA', start=start_date, end=end_date)         
+ford = yf.download('F', start=start_date, end=end_date)
+general_motors = yf.download('GM', start=start_date, end=end_date)
+sp500 = yf.download('^GSPC', start=start_date, end=end_date)
+
+nucor.index = pd.to_datetime(nucor.index)
+alcoa.index = pd.to_datetime(alcoa.index)
+ford.index = pd.to_datetime(ford.index)
+general_motors.index = pd.to_datetime(general_motors.index)
+sp500.index = pd.to_datetime(sp500.index)
 
 # Returns
 nucor_returns = nucor['Close'].pct_change().dropna()
@@ -40,59 +50,61 @@ plt.show()
 
 # ANALYSIS
 
-tariff_announcement_date = '2025-02-01'
-tariff_implementation_date = '2025-03-04'
+election_date = pd.to_datetime('2024-11-05')
+tariff_announcement_date = pd.to_datetime('2025-02-01')
+tariff_implementation_date = pd.to_datetime('2025-03-04')
 
-#Stock performace before and after Tariff
-# Nucor
-nucor_before = nucor.loc[:tariff_announcement_date, 'Close'].mean()
-nucor_between = nucor.loc[tariff_announcement_date:tariff_implementation_date, 'Close'].mean()
-nucor_after = nucor.loc[tariff_implementation_date:, 'Close'].mean()
+stocks = {
+    'Nucor': nucor,
+    'Alcoa': alcoa,
+    'Ford': ford,
+    'General Motors': general_motors,
+    'S&P 500': sp500
+}
 
-print(f"Nucor closing price before tariff: {nucor_before}, \nNucor closing price after tariff announcement: {nucor_between}")
+for name, df in stocks.items():
+    before = df.loc[:election_date, 'Close'].mean()
+    between = df.loc[tariff_announcement_date:tariff_implementation_date, 'Close'].mean()
+    after = df.loc[tariff_implementation_date:, 'Close'].mean()
 
-# Alcoa
-alcoa_before = alcoa.loc[:tariff_announcement_date, 'Close'].mean()
-alcoa_between = alcoa.loc[tariff_announcement_date:tariff_implementation_date, 'Close'].mean()
-alcoa_after = alcoa.loc[tariff_implementation_date:, 'Close'].mean()
+    print(f"\n{name} closing price before election: {before.values}")
+    print(f"{name} closing price after tariff announcement: {between.values}")
+    print(f"{name} closing price after tariff implementation: {after.values}")
 
-print(f"Alcoa closing price before tariff: {alcoa_before}, \nAlcoa closing price after tariff announcement: {alcoa_between}")
 
-# Ford
-ford_before = ford.loc[:tariff_announcement_date, 'Close'].mean()
-ford_between = ford.loc[tariff_announcement_date:tariff_implementation_date, 'Close'].mean()
-ford_after = ford.loc[tariff_implementation_date:, 'Close'].mean()
+    plt.figure(figsize=(12,6))
+    plt.plot(df.index, df['Close'], label=name)
+    
+    plt.axvline(x=tariff_announcement_date, color='b', linestyle='--', label='Tariff Announcement')
+    plt.axvline(x=tariff_implementation_date, color='g', linestyle='--', label='Tariff Implementation')
+    plt.axvline(x=election_date, color='r', linestyle='--', label='Election Date')
 
-print(f"Ford closing price before tariff: {ford_before}, \nFord closing price after tariff announcement: {ford_between}")
+    plt.title(f'{name} Stock Price with Tariff Events')
+    plt.xlabel('Date')
+    plt.ylabel('Closing Price')
+    plt.legend()
+    plt.show()
 
-# General Motors
-g_motors_before = general_motors.loc[:tariff_announcement_date, 'Close'].mean()
-g_motors_between = general_motors.loc[tariff_announcement_date:tariff_implementation_date, 'Close'].mean()
-g_motors_after = general_motors.loc[tariff_implementation_date:, 'Close'].mean()
 
-print(f"General Motors closing price before tariff: {g_motors_before}, \nGeneral Motors closing price after tariff announcement: {g_motors_between}")
+
 
 # Machine Learning
 from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LinearRegression
+from sklearn.ensemble import RandomForestRegressor
 
-X = nucor[['Open', 'High', 'Low']]
-y = nucor['Close']
+X = nucor[['Open', 'High', 'Low']].shift(1).dropna()
+y = nucor.loc[X.index, 'Close']
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-model = LinearRegression()
+model = RandomForestRegressor()
 model.fit(X_train, y_train)
 
 predictions = model.predict(X_test)
 
-print("Model score:", model.score(X_test, y_test))
+print("\nModel score:", model.score(X_test, y_test))
 
-plt.figure(figsize=(10,6))
-plt.plot(y_test.values, label='Actual Closing Prices')
-plt.plot(predictions, label='Predicted Closing Prices')
-plt.title('Actual vs. Predicted Closing Prices')
-plt.xlabel('Data Points')
-plt.ylabel('Price')
-plt.legend()
-plt.show()
+last_day_data = nucor[['Open', 'High', 'Low']].iloc[-1].values.reshape(1, -1)
+next_day_prediction = model.predict(last_day_data)
+
+print(f"\nPredicted closing price for the next day: {next_day_prediction[0]}")
